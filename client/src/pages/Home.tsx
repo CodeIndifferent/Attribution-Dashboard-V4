@@ -1,23 +1,32 @@
 /*
  * OVERVIEW PAGE — LUCIA ATTRIBUTION DASHBOARD
- * Full dashboard summary hub. Every section card has a unique design.
- * Dark orbital theme.
+ * Executive decision-making dashboard.
+ * Sections: KPI strip · Revenue & Traffic trends · Campaign ROI · Active Links ·
+ *           User Types · Conversion Paths · Funnel · Cross-Device Fingerprinting · Live Feed
  */
+import { useState, useMemo } from 'react';
 import { useLocation } from 'wouter';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer,
+  AreaChart, Area, BarChart, Bar, LineChart, Line,
+  PieChart, Pie, Cell, ComposedChart, Scatter,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 import {
-  Target, Users, Globe, Route, Link2, Orbit,
-  ArrowUpRight, ArrowDownRight, ChevronRight, Zap, Activity,
-  MousePointerClick, CheckCircle, AlertTriangle,
-  TrendingUp, Layers, Clock, Wallet,
+  TrendingUp, TrendingDown, Users, DollarSign, MousePointerClick,
+  Link2, Activity, ChevronRight, ArrowUpRight, ArrowDownRight,
+  Zap, Target, Globe, Layers, CheckCircle, AlertTriangle,
+  Smartphone, Monitor, Tablet, RefreshCw, Eye, ShoppingCart,
+  Orbit, ExternalLink, Copy, BarChart3,
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { campaignPerformanceData, userSessionsData, realtimeEventsData, conversionFunnelData } from '@/lib/dashboardSampleData';
-import { overviewAnalytics } from '@/lib/analyticsData';
+import {
+  campaignPerformanceData, conversionFunnelData, realtimeEventsData,
+  trafficSourcesData, devicePerformanceData, dailyActivityData,
+  userSessionsData, attributionModelsData,
+} from '@/lib/dashboardSampleData';
+import { mockTrackableLinks } from '@/lib/trackableLinkData';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -28,652 +37,772 @@ const fmtMoney = (n: number) =>
   n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(2)}M`
   : n >= 1_000 ? `$${(n / 1_000).toFixed(0)}K`
   : `$${n}`;
-const fmtDur = (s: number) => `${Math.floor(s / 60)}m ${s % 60}s`;
 
-// ─── Sparkline data ────────────────────────────────────────────────────────────
-const revenueSparkline = [32,38,35,42,48,44,52,58,55,64,72,78,82,88].map(v => ({ v: v * 1000 }));
-const userSparkline    = [8.2,9.1,8.8,10.2,11.4,10.8,12.6,13.8,13.2,15].map(v => ({ v: v * 1000 }));
-const convSparkline    = [420,510,480,590,640,610,720,800,780,890].map(v => ({ v }));
-const roiSparkline     = [3.2,3.5,3.4,3.8,4.0,3.9,4.2,4.5,4.4,4.8].map(v => ({ v }));
-
-// ─── Journey funnel ───────────────────────────────────────────────────────────
-const journeySteps = [
-  { step: 'Click', users: 9600, pct: 100 },
-  { step: 'Land', users: 8200, pct: 85 },
-  { step: 'View', users: 5600, pct: 58 },
-  { step: 'Cart', users: 2800, pct: 29 },
-  { step: 'Buy', users: 1100, pct: 11 },
-];
-
-// ─── Orbital resolution trend ─────────────────────────────────────────────────
-const orbitalMini = [
-  { t: 'W1', r: 62 }, { t: 'W2', r: 68 }, { t: 'W3', r: 71 }, { t: 'W4', r: 75 },
-  { t: 'W5', r: 79 }, { t: 'W6', r: 84 }, { t: 'W7', r: 87 }, { t: 'W8', r: 88 },
-];
-
-// ─── Links data ───────────────────────────────────────────────────────────────
-const linksMini = [
-  { name: 'WIDGET-Q1', label: 'Q1 Product Launch', clicks: 43200, conv: 2900, roi: 5.8, color: '#3b82f6' },
-  { name: 'SUMMER26',  label: 'Summer Sale 2026',  clicks: 40000, conv: 3100, roi: 4.9, color: '#10b981' },
-  { name: 'ENT-DEMO',  label: 'Enterprise Demo',   clicks: 12800, conv: 550,  roi: 5.3, color: '#8b5cf6' },
-];
-
-// ─── Geo data ─────────────────────────────────────────────────────────────────
-const geoMini = [
-  { region: 'North America', pct: 49, color: '#3b82f6' },
-  { region: 'Europe',        pct: 26, color: '#10b981' },
-  { region: 'Asia',          pct: 14, color: '#f59e0b' },
-  { region: 'South America', pct: 5,  color: '#8b5cf6' },
-  { region: 'Oceania',       pct: 4,  color: '#06b6d4' },
-  { region: 'Middle East',   pct: 2,  color: '#ec4899' },
-];
-
-// ─── Dark tooltip ─────────────────────────────────────────────────────────────
-const DarkTooltip = ({ active, payload, label }: any) => {
+// ─── Dark Tooltip ─────────────────────────────────────────────────────────────
+const DT = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-slate-900/95 border border-blue-500/20 rounded-lg p-2 text-[10px] shadow-xl z-50">
-      {label && <p className="text-blue-300 font-mono mb-0.5">{label}</p>}
+    <div className="bg-slate-900/98 border border-blue-500/25 rounded-lg p-2.5 text-[11px] shadow-2xl z-50 min-w-[120px]">
+      {label && <p className="text-blue-300 font-mono mb-1 border-b border-blue-900/30 pb-1">{label}</p>}
       {payload.map((p: any, i: number) => (
-        <p key={i} style={{ color: p.color || '#94a3b8' }}>
-          {p.name}: <span className="font-bold">{p.value}</span>
+        <p key={i} className="flex items-center justify-between gap-3" style={{ color: p.color || p.fill || '#94a3b8' }}>
+          <span>{p.name}</span>
+          <span className="font-bold">{typeof p.value === 'number' && p.value > 1000 ? fmtMoney(p.value) : p.value}</span>
         </p>
       ))}
     </div>
   );
 };
 
-// ─── Hero KPI Card ────────────────────────────────────────────────────────────
-function HeroKpi({ label, value, delta, color, sparkData }: {
-  label: string; value: string; delta: number; color: string; sparkData: { v: number }[];
+// ─── Section Header ───────────────────────────────────────────────────────────
+function SectionHeader({ icon: Icon, title, subtitle, color = 'blue', action, onAction }: {
+  icon: any; title: string; subtitle?: string; color?: string;
+  action?: string; onAction?: () => void;
 }) {
-  const hex: Record<string, string> = {
-    blue: '#3b82f6', emerald: '#10b981', purple: '#8b5cf6', amber: '#f59e0b',
+  const iconColors: Record<string, string> = {
+    blue: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+    emerald: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+    purple: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+    amber: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+    cyan: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
+    pink: 'text-pink-400 bg-pink-500/10 border-pink-500/20',
+    indigo: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
   };
-  const c = hex[color] || '#3b82f6';
+  const c = iconColors[color] || iconColors.blue;
   return (
-    <div className="rounded-xl border border-white/5 bg-slate-900/50 backdrop-blur-md p-4 flex flex-col gap-1">
-      <div className="flex items-center justify-between">
-        <p className="text-[10px] text-slate-500 uppercase tracking-wider">{label}</p>
-        <span className={`text-[10px] font-mono flex items-center gap-0.5 ${delta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-          {delta >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-          {Math.abs(delta)}%
-        </span>
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-3">
+        <div className={`w-8 h-8 rounded-lg border flex items-center justify-center ${c}`}>
+          <Icon className="w-4 h-4" />
+        </div>
+        <div>
+          <h2 className="text-sm font-bold text-slate-100">{title}</h2>
+          {subtitle && <p className="text-[10px] text-slate-500">{subtitle}</p>}
+        </div>
       </div>
-      <p className="text-2xl font-extrabold text-slate-100" style={{ fontFamily: 'Syne, sans-serif' }}>{value}</p>
-      <ResponsiveContainer width="100%" height={32}>
-        <AreaChart data={sparkData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-          <defs>
-            <linearGradient id={`sg-${color}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={c} stopOpacity={0.3} />
-              <stop offset="95%" stopColor={c} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <Area type="monotone" dataKey="v" stroke={c} fill={`url(#sg-${color})`} strokeWidth={1.5} dot={false} />
-        </AreaChart>
-      </ResponsiveContainer>
+      {action && onAction && (
+        <button onClick={onAction} className={`text-[10px] font-mono flex items-center gap-1 hover:opacity-80 transition-opacity ${c.split(' ')[0]}`}>
+          {action} <ChevronRight className="w-3 h-3" />
+        </button>
+      )}
     </div>
   );
 }
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+function StatCard({ label, value, delta, sub, color = 'blue' }: {
+  label: string; value: string; delta?: number; sub?: string; color?: string;
+}) {
+  const borderColors: Record<string, string> = {
+    blue: 'border-blue-500/20', emerald: 'border-emerald-500/20',
+    purple: 'border-purple-500/20', amber: 'border-amber-500/20',
+  };
+  return (
+    <div className={`rounded-xl border ${borderColors[color] || borderColors.blue} bg-slate-900/50 p-4`}>
+      <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{label}</p>
+      <p className="text-2xl font-extrabold text-slate-100" style={{ fontFamily: 'Syne, sans-serif' }}>{value}</p>
+      {(delta !== undefined || sub) && (
+        <div className="flex items-center gap-1.5 mt-1">
+          {delta !== undefined && (
+            <span className={`text-[10px] font-mono flex items-center gap-0.5 ${delta >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {delta >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+              {Math.abs(delta)}%
+            </span>
+          )}
+          {sub && <span className="text-[10px] text-slate-600">{sub}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Deterministic daily data (no random) ────────────────────────────────────
+const DAILY = Array.from({ length: 30 }, (_, i) => {
+  const base = 50000 + i * 2000;
+  const wave = Math.sin(i * 0.4) * 15000;
+  const date = new Date('2026-02-17');
+  date.setDate(date.getDate() + i);
+  return {
+    date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    revenue: Math.round(base + wave),
+    sessions: Math.round(12000 + i * 300 + Math.sin(i * 0.5) * 3000),
+    conversions: Math.round(600 + i * 15 + Math.sin(i * 0.6) * 150),
+    users: Math.round(4000 + i * 100 + Math.sin(i * 0.45) * 800),
+  };
+});
+
+// ─── Channel ROI data ─────────────────────────────────────────────────────────
+const CHANNEL_ROI = trafficSourcesData.map(s => ({
+  channel: s.source.replace(' Search', '').replace(' Media', ''),
+  revenue: s.revenue,
+  spend: Math.round(s.revenue / s.roi),
+  conversions: s.conversions,
+  roi: s.roi,
+  users: s.users,
+}));
+
+// ─── User type segments ───────────────────────────────────────────────────────
+const USER_SEGMENTS = [
+  { name: 'High-Value',      count: 12400, revenue: 186000, avgRev: 15.0, conv: 4.2, color: '#3b82f6',  desc: '5+ purchases, $100+ LTV' },
+  { name: 'Repeat Buyer',    count: 28600, revenue: 143000, avgRev: 5.0,  conv: 8.1, color: '#10b981',  desc: '2–4 purchases' },
+  { name: 'First-Time',      count: 54200, revenue: 108400, avgRev: 2.0,  conv: 3.4, color: '#8b5cf6',  desc: 'Single purchase' },
+  { name: 'Active Prospect', count: 89300, revenue: 0,      avgRev: 0,    conv: 0,   color: '#f59e0b',  desc: 'Engaged, not converted' },
+  { name: 'Dormant',         count: 100200,revenue: 0,      avgRev: 0,    conv: 0,   color: '#64748b',  desc: 'No activity 30+ days' },
+];
+
+// ─── Conversion paths ─────────────────────────────────────────────────────────
+const CONV_PATHS = [
+  { path: ['Email', 'Landing', 'Product', 'Checkout'],         rate: 18.4, revenue: 142000, users: 3820, color: '#3b82f6' },
+  { path: ['Paid Ad', 'Landing', 'Product', 'Cart', 'Buy'],    rate: 12.1, revenue: 98600,  users: 2140, color: '#10b981' },
+  { path: ['Organic', 'Blog', 'Product', 'Checkout'],          rate: 9.8,  revenue: 76400,  users: 1680, color: '#8b5cf6' },
+  { path: ['Social', 'Landing', 'Checkout'],                   rate: 7.2,  revenue: 54200,  users: 1240, color: '#f59e0b' },
+  { path: ['Direct', 'Product', 'Buy'],                        rate: 14.6, revenue: 38900,  users: 890,  color: '#06b6d4' },
+];
+
+// ─── Cross-device fingerprint data ────────────────────────────────────────────
+const CROSS_DEVICE = [
+  { segment: 'Desktop Only',      users: 58200, conv: 18900, roi: 4.5, color: '#3b82f6',  icon: Monitor },
+  { segment: 'Mobile Only',       users: 52400, conv: 12600, roi: 3.2, color: '#10b981',  icon: Smartphone },
+  { segment: 'Desktop + Mobile',  users: 34600, conv: 14800, roi: 5.8, color: '#8b5cf6',  icon: Layers },
+  { segment: 'All Devices',       users: 8800,  conv: 4900,  roi: 7.2, color: '#f59e0b',  icon: Tablet },
+];
+
+const DEVICE_JOURNEY = [
+  { stage: 'Awareness', desktop: 45, mobile: 55 },
+  { stage: 'Discovery', desktop: 52, mobile: 48 },
+  { stage: 'Research',  desktop: 68, mobile: 32 },
+  { stage: 'Cart',      desktop: 71, mobile: 29 },
+  { stage: 'Purchase',  desktop: 74, mobile: 26 },
+  { stage: 'Retention', desktop: 69, mobile: 31 },
+];
+
+// ─── Campaign channel breakdown ───────────────────────────────────────────────
+const CAMP_CHANNELS = [
+  { campaign: 'Q1 Launch',   email: 53600, social: 62400, paid: 45600, organic: 28000, direct: 15950 },
+  { campaign: 'Summer Sale', email: 48200, social: 55800, paid: 38400, organic: 22600, direct: 12800 },
+  { campaign: 'Enterprise',  email: 42100, social: 18600, paid: 22400, organic: 8200,  direct: 7400  },
+];
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Home() {
   const [, navigate] = useLocation();
-  const analytics = overviewAnalytics;
+  const [trendMetric, setTrendMetric] = useState<'revenue' | 'sessions' | 'conversions' | 'users'>('revenue');
+  const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
+  const [selectedPath, setSelectedPath] = useState<number | null>(null);
+  const [funnelView, setFunnelView] = useState<'absolute' | 'rate'>('absolute');
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
+
+  const activeLinks = mockTrackableLinks.filter(l => l.status === 'Active');
+
+  const copyLink = (url: string, id: string) => {
+    navigator.clipboard.writeText(url).catch(() => {});
+    setCopiedLink(id);
+    setTimeout(() => setCopiedLink(null), 1800);
+  };
+
+  const trendColor: Record<string, string> = {
+    revenue: '#3b82f6', sessions: '#10b981', conversions: '#8b5cf6', users: '#f59e0b',
+  };
+
+  const segmentTotal = USER_SEGMENTS.reduce((a, s) => a + s.count, 0);
+  const pieData = USER_SEGMENTS.map(s => ({ name: s.name, value: s.count, color: s.color }));
 
   return (
-    <DashboardLayout title="Overview" subtitle="Full platform summary — click any section to explore">
-      <div className="space-y-5">
+    <DashboardLayout title="Overview" subtitle="Executive performance dashboard — real-time attribution insights">
+      <div className="space-y-6">
 
-        {/* ── Hero Banner ──────────────────────────────────────────────────── */}
-        <div className="relative rounded-xl overflow-hidden border border-blue-500/20 bg-gradient-to-r from-slate-900/60 via-blue-900/20 to-slate-900/60 p-6">
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute -top-20 -left-20 w-72 h-72 bg-blue-500/8 rounded-full blur-3xl" />
-            <div className="absolute -bottom-20 -right-20 w-72 h-72 bg-cyan-500/8 rounded-full blur-3xl" />
-          </div>
-          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Orbit className="w-4 h-4 text-blue-400" />
-                <span className="text-[10px] font-mono text-blue-400 uppercase tracking-widest">Lucia Attribution · Orbital Identity Platform</span>
-              </div>
-              <h2 className="text-2xl font-extrabold text-blue-100 leading-tight" style={{ fontFamily: 'Syne, sans-serif' }}>
-                Platform Performance Summary
-              </h2>
-              <p className="text-sm text-blue-300/60 mt-1 max-w-xl">
-                Every campaign, user journey, and trackable link in one view. Click any section to drill in.
-              </p>
-            </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="text-right">
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider">Platform Status</p>
-                <p className="text-lg font-bold text-emerald-400">Operational</p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-emerald-400" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── KPI Strip ────────────────────────────────────────────────────── */}
+        {/* ══════════════════════════════════════════════════════════════════
+            1. KPI STRIP
+        ══════════════════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <HeroKpi label="Total Revenue"  value={fmtMoney(487250)} delta={18} color="blue"    sparkData={revenueSparkline} />
-          <HeroKpi label="Total Users"    value={fmt(analytics.kpi.totalUsers)} delta={12} color="emerald" sparkData={userSparkline} />
-          <HeroKpi label="Conversions"    value={fmt(11216)}       delta={9}  color="purple"  sparkData={convSparkline} />
-          <HeroKpi label="Avg ROI"        value="3.88x"            delta={7}  color="amber"   sparkData={roiSparkline} />
+          <StatCard label="Total Revenue"   value="$487K"  delta={18} sub="vs last 30d" color="blue" />
+          <StatCard label="Conversions"     value="11.2K"  delta={9}  sub="all channels" color="purple" />
+          <StatCard label="Avg ROI"         value="3.88x"  delta={7}  sub="across campaigns" color="emerald" />
+          <StatCard label="Active Users"    value="150K"   delta={12} sub="unique identities" color="amber" />
         </div>
 
-        {/* ── Live ticker ──────────────────────────────────────────────────── */}
-        <div className="rounded-xl border border-blue-900/20 bg-slate-900/40 px-4 py-2.5 flex items-center gap-4 overflow-hidden">
-          <div className="flex items-center gap-1.5 shrink-0">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider">Live</span>
+        {/* ══════════════════════════════════════════════════════════════════
+            2. REVENUE & TRAFFIC TREND (interactive metric switcher)
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="rounded-xl border border-blue-900/20 bg-slate-900/50 p-5">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <SectionHeader icon={TrendingUp} title="30-Day Performance Trend" subtitle="Click a metric to switch the chart view" color="blue" />
+            <div className="flex items-center gap-1 bg-slate-800/60 rounded-lg p-1">
+              {(['revenue', 'sessions', 'conversions', 'users'] as const).map(m => (
+                <button key={m} onClick={() => setTrendMetric(m)}
+                  className={`px-3 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider transition-all ${trendMetric === m ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}>
+                  {m}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center gap-6 overflow-x-auto text-[11px] font-mono whitespace-nowrap">
-            {realtimeEventsData.map(evt => (
-              <span key={evt.id} className={`flex items-center gap-1.5 ${evt.type === 'Conversion' ? 'text-emerald-400' : 'text-slate-400'}`}>
-                <Activity className="w-3 h-3 shrink-0" />
-                <span className="text-slate-500">{evt.user}</span>
-                <span className="text-slate-700">·</span>
-                <span>{evt.type}</span>
-                {evt.value > 0 && <span className="text-emerald-400">${evt.value}</span>}
-                <span className="text-slate-600">via {evt.channel}</span>
-              </span>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={DAILY} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
+              <defs>
+                <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor={trendColor[trendMetric]} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={trendColor[trendMetric]} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#475569' }} interval={4} />
+              <YAxis tick={{ fontSize: 9, fill: '#475569' }} tickFormatter={v => trendMetric === 'revenue' ? `$${(v/1000).toFixed(0)}K` : fmt(v)} />
+              <Tooltip content={<DT />} />
+              <Area type="monotone" dataKey={trendMetric} name={trendMetric.charAt(0).toUpperCase() + trendMetric.slice(1)}
+                stroke={trendColor[trendMetric]} fill="url(#trendGrad)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════
+            3. CAMPAIGN ROI — which campaigns drive real conversions
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="rounded-xl border border-blue-900/20 bg-slate-900/50 p-5">
+          <SectionHeader icon={Target} title="Campaign Performance — True ROI by Channel"
+            subtitle="Revenue, spend, and conversions across all active campaigns"
+            color="blue" action="View Campaigns" onAction={() => navigate('/campaigns')} />
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+            {/* Stacked channel revenue bar */}
+            <div>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-3">Revenue by Channel per Campaign</p>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={CAMP_CHANNELS} margin={{ top: 0, right: 0, bottom: 0, left: -10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="campaign" tick={{ fontSize: 9, fill: '#475569' }} />
+                  <YAxis tick={{ fontSize: 9, fill: '#475569' }} tickFormatter={v => `$${(v/1000).toFixed(0)}K`} />
+                  <Tooltip content={<DT />} />
+                  <Legend wrapperStyle={{ fontSize: 9, color: '#64748b' }} />
+                  <Bar dataKey="email"   name="Email"   stackId="a" fill="#3b82f6" radius={[0,0,0,0]} />
+                  <Bar dataKey="social"  name="Social"  stackId="a" fill="#10b981" />
+                  <Bar dataKey="paid"    name="Paid"    stackId="a" fill="#8b5cf6" />
+                  <Bar dataKey="organic" name="Organic" stackId="a" fill="#f59e0b" />
+                  <Bar dataKey="direct"  name="Direct"  stackId="a" fill="#06b6d4" radius={[3,3,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* ROI vs Spend scatter + table */}
+            <div>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-3">Channel ROI vs Spend</p>
+              <ResponsiveContainer width="100%" height={120}>
+                <ComposedChart data={CHANNEL_ROI} margin={{ top: 0, right: 0, bottom: 0, left: -10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="channel" tick={{ fontSize: 9, fill: '#475569' }} />
+                  <YAxis yAxisId="left" tick={{ fontSize: 9, fill: '#475569' }} tickFormatter={v => `$${(v/1000).toFixed(0)}K`} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 9, fill: '#475569' }} tickFormatter={v => `${v}x`} />
+                  <Tooltip content={<DT />} />
+                  <Bar yAxisId="left" dataKey="spend" name="Spend" fill="#1e293b" radius={[3,3,0,0]} />
+                  <Bar yAxisId="left" dataKey="revenue" name="Revenue" fill="#3b82f6" opacity={0.7} radius={[3,3,0,0]} />
+                  <Line yAxisId="right" type="monotone" dataKey="roi" name="ROI" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3, fill: '#f59e0b' }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+
+              {/* Campaign table */}
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full text-[10px]">
+                  <thead>
+                    <tr className="border-b border-blue-900/20">
+                      {['Campaign', 'Spend', 'Revenue', 'Conv.', 'ROI', 'CPA', 'Status'].map(h => (
+                        <th key={h} className="text-left text-slate-500 pb-1.5 pr-3 font-medium uppercase tracking-wider">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {campaignPerformanceData.filter(c => c.status === 'Active').map((c, i) => {
+                      const colors = ['#3b82f6', '#10b981', '#8b5cf6'];
+                      return (
+                        <tr key={c.id} className="border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors">
+                          <td className="py-1.5 pr-3">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ background: colors[i] }} />
+                              <span className="text-slate-300 font-medium">{c.name}</span>
+                            </div>
+                          </td>
+                          <td className="py-1.5 pr-3 font-mono text-slate-400">{fmtMoney(c.spend)}</td>
+                          <td className="py-1.5 pr-3 font-mono text-slate-200">{fmtMoney(c.revenue)}</td>
+                          <td className="py-1.5 pr-3 font-mono text-slate-400">{fmt(c.conversions)}</td>
+                          <td className="py-1.5 pr-3 font-mono font-bold" style={{ color: colors[i] }}>{c.roi}x</td>
+                          <td className="py-1.5 pr-3 font-mono text-slate-400">${c.cpa}</td>
+                          <td className="py-1.5">
+                            <span className="px-1.5 py-0.5 rounded-full text-[9px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Active</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════
+            4. ACTIVE TRACKABLE LINKS — clickable, each opens detail
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="rounded-xl border border-pink-500/15 bg-slate-900/50 p-5">
+          <SectionHeader icon={Link2} title="Active Trackable Links"
+            subtitle="Each link is the canonical source identifier — SDK + supercookie enabled"
+            color="pink" action="Manage Links" onAction={() => navigate('/links')} />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {activeLinks.map((link, idx) => {
+              const linkColors = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#06b6d4'];
+              const c = linkColors[idx % linkColors.length];
+              return (
+                <motion.div key={link.id}
+                  whileHover={{ y: -2, boxShadow: `0 8px 24px ${c}15` }}
+                  className="rounded-lg border p-4 cursor-pointer group transition-all"
+                  style={{ borderColor: `${c}30`, background: `${c}06` }}
+                  onClick={() => navigate('/links')}
+                >
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded" style={{ background: `${c}20`, color: c }}>
+                          {link.shortCode}
+                        </span>
+                        {link.sdkEnabled && (
+                          <span className="text-[8px] px-1 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">SDK</span>
+                        )}
+                        {link.supercookieEnabled && (
+                          <span className="text-[8px] px-1 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/20">SC</span>
+                        )}
+                      </div>
+                      <p className="text-[11px] font-semibold text-slate-200 truncate">{link.name}</p>
+                    </div>
+                    <div className="flex items-center gap-1 ml-2 shrink-0">
+                      <button
+                        onClick={e => { e.stopPropagation(); copyLink(link.trackingUrl, link.id); }}
+                        className="p-1 rounded hover:bg-slate-700/50 transition-colors"
+                        title="Copy tracking URL"
+                      >
+                        {copiedLink === link.id
+                          ? <CheckCircle className="w-3 h-3 text-emerald-400" />
+                          : <Copy className="w-3 h-3 text-slate-500 hover:text-slate-300" />}
+                      </button>
+                      <ExternalLink className="w-3 h-3 text-slate-600 group-hover:text-slate-400 transition-colors" />
+                    </div>
+                  </div>
+
+                  {/* Metrics row */}
+                  <div className="grid grid-cols-4 gap-1 mb-3">
+                    {[
+                      { label: 'Clicks', value: fmt(link.totalClicks) },
+                      { label: 'Conv.', value: fmt(link.totalConversions) },
+                      { label: 'Revenue', value: fmtMoney(link.totalRevenue) },
+                      { label: 'ROI', value: `${link.overallRoi}x` },
+                    ].map(m => (
+                      <div key={m.label} className="text-center">
+                        <p className="text-[9px] text-slate-600 uppercase">{m.label}</p>
+                        <p className="text-[11px] font-mono font-bold text-slate-200">{m.value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Supercookie resolution bar */}
+                  <div>
+                    <div className="flex items-center justify-between mb-0.5 text-[9px]">
+                      <span className="text-slate-600">Supercookie resolution</span>
+                      <span className="font-mono" style={{ color: c }}>{link.supercookieResolutionRate}%</span>
+                    </div>
+                    <div className="h-1 rounded-full bg-slate-800 overflow-hidden">
+                      <motion.div className="h-full rounded-full"
+                        style={{ background: c }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${link.supercookieResolutionRate}%` }}
+                        transition={{ duration: 0.7, delay: idx * 0.1 }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Channel mini-bars */}
+                  <div className="mt-2.5 flex items-end gap-1 h-8">
+                    {link.channelMetrics.map((ch, ci) => {
+                      const maxRev = Math.max(...link.channelMetrics.map(x => x.revenue));
+                      const h = Math.round((ch.revenue / maxRev) * 100);
+                      const chColors = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#06b6d4'];
+                      return (
+                        <div key={ch.channel} className="flex-1 flex flex-col items-center gap-0.5" title={`${ch.channel}: ${fmtMoney(ch.revenue)}`}>
+                          <div className="w-full rounded-sm" style={{ height: `${h}%`, background: chColors[ci % chColors.length], opacity: 0.7 }} />
+                          <span className="text-[7px] text-slate-600 truncate w-full text-center">{ch.channel.split(' ')[0]}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════
+            5. USER TYPES — interactive segment explorer
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="rounded-xl border border-blue-900/20 bg-slate-900/50 p-5">
+          <SectionHeader icon={Users} title="User Segments"
+            subtitle="Click a segment to explore its revenue contribution and conversion rate"
+            color="emerald" action="View Users" onAction={() => navigate('/users')} />
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-center">
+            {/* Pie chart */}
+            <div className="flex items-center gap-4">
+              <ResponsiveContainer width="45%" height={180}>
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={80}
+                    dataKey="value" paddingAngle={2}
+                    onClick={(d) => setSelectedSegment(selectedSegment === d.name ? null : d.name)}>
+                    {pieData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color}
+                        opacity={selectedSegment && selectedSegment !== entry.name ? 0.3 : 1}
+                        stroke={selectedSegment === entry.name ? '#fff' : 'transparent'}
+                        strokeWidth={selectedSegment === entry.name ? 2 : 0}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<DT />} />
+                </PieChart>
+              </ResponsiveContainer>
+
+              {/* Segment list */}
+              <div className="flex-1 space-y-2">
+                {USER_SEGMENTS.map(s => (
+                  <div key={s.name}
+                    onClick={() => setSelectedSegment(selectedSegment === s.name ? null : s.name)}
+                    className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all border ${
+                      selectedSegment === s.name
+                        ? 'border-white/20 bg-white/5'
+                        : 'border-transparent hover:border-white/10 hover:bg-white/3'
+                    }`}>
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-medium text-slate-200">{s.name}</span>
+                        <span className="text-[10px] font-mono text-slate-400">{fmt(s.count)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex-1 h-1 rounded-full bg-slate-800 overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${(s.count / segmentTotal) * 100}%`, background: s.color }} />
+                        </div>
+                        <span className="text-[9px] text-slate-600 shrink-0">{Math.round((s.count / segmentTotal) * 100)}%</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Selected segment detail or default revenue bars */}
+            <AnimatePresence mode="wait">
+              {selectedSegment ? (
+                <motion.div key="detail" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
+                  {(() => {
+                    const seg = USER_SEGMENTS.find(s => s.name === selectedSegment)!;
+                    return (
+                      <div className="rounded-xl border p-4 space-y-3" style={{ borderColor: `${seg.color}30`, background: `${seg.color}08` }}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-bold text-slate-100">{seg.name}</p>
+                            <p className="text-[10px] text-slate-500">{seg.desc}</p>
+                          </div>
+                          <button onClick={() => setSelectedSegment(null)} className="text-[9px] text-slate-500 hover:text-slate-300">✕ close</button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { label: 'Users', value: fmt(seg.count), color: seg.color },
+                            { label: 'Revenue', value: seg.revenue > 0 ? fmtMoney(seg.revenue) : '—', color: seg.color },
+                            { label: 'Avg Rev / User', value: seg.avgRev > 0 ? `$${seg.avgRev}` : '—', color: seg.color },
+                            { label: 'Conv. Rate', value: seg.conv > 0 ? `${seg.conv}%` : '—', color: seg.color },
+                          ].map(m => (
+                            <div key={m.label} className="rounded-lg bg-slate-800/40 p-2.5 text-center">
+                              <p className="text-[9px] text-slate-500 uppercase">{m.label}</p>
+                              <p className="text-sm font-mono font-bold mt-0.5" style={{ color: m.color }}>{m.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                        {seg.revenue > 0 && (
+                          <div>
+                            <p className="text-[9px] text-slate-500 mb-1">Revenue share of total</p>
+                            <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${(seg.revenue / 487250) * 100}%`, background: seg.color }} />
+                            </div>
+                            <p className="text-[9px] text-right mt-0.5 font-mono" style={{ color: seg.color }}>
+                              {Math.round((seg.revenue / 487250) * 100)}% of total revenue
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </motion.div>
+              ) : (
+                <motion.div key="default" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-3">Revenue by Segment</p>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <BarChart data={USER_SEGMENTS.filter(s => s.revenue > 0)} margin={{ top: 0, right: 0, bottom: 0, left: -10 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                      <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#475569' }} />
+                      <YAxis tick={{ fontSize: 9, fill: '#475569' }} tickFormatter={v => `$${(v/1000).toFixed(0)}K`} />
+                      <Tooltip content={<DT />} />
+                      <Bar dataKey="revenue" name="Revenue" radius={[4, 4, 0, 0]}>
+                        {USER_SEGMENTS.filter(s => s.revenue > 0).map((s, i) => (
+                          <Cell key={i} fill={s.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <p className="text-[9px] text-slate-600 mt-2 text-center">← Click a segment on the left to see its details</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════
+            6. CONVERSION PATHS — top paths from first touch to purchase
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="rounded-xl border border-blue-900/20 bg-slate-900/50 p-5">
+          <SectionHeader icon={MousePointerClick} title="Top Conversion Paths"
+            subtitle="Most common journeys from first touch to purchase — click a path to highlight"
+            color="purple" action="View Analytics" onAction={() => navigate('/analytics')} />
+
+          <div className="space-y-3">
+            {CONV_PATHS.map((path, idx) => (
+              <motion.div key={idx}
+                onClick={() => setSelectedPath(selectedPath === idx ? null : idx)}
+                whileHover={{ x: 3 }}
+                className={`rounded-lg border p-3 cursor-pointer transition-all ${
+                  selectedPath === idx ? 'border-white/20 bg-white/5' : 'border-slate-800/60 hover:border-slate-700/60'
+                }`}>
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* Path steps */}
+                  <div className="flex items-center gap-1 flex-1 min-w-0 flex-wrap">
+                    {path.path.map((step, si) => (
+                      <div key={si} className="flex items-center gap-1">
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border"
+                          style={{ color: path.color, borderColor: `${path.color}40`, background: `${path.color}10` }}>
+                          {step}
+                        </span>
+                        {si < path.path.length - 1 && <ChevronRight className="w-3 h-3 text-slate-700 shrink-0" />}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Metrics */}
+                  <div className="flex items-center gap-4 shrink-0 text-[11px]">
+                    <div className="text-center">
+                      <p className="text-[9px] text-slate-600">Users</p>
+                      <p className="font-mono font-bold text-slate-300">{fmt(path.users)}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[9px] text-slate-600">Revenue</p>
+                      <p className="font-mono font-bold text-slate-300">{fmtMoney(path.revenue)}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[9px] text-slate-600">Conv. Rate</p>
+                      <p className="font-mono font-bold" style={{ color: path.color }}>{path.rate}%</p>
+                    </div>
+                  </div>
+
+                  {/* Bar */}
+                  <div className="w-full mt-1.5">
+                    <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                      <motion.div className="h-full rounded-full"
+                        style={{ background: path.color }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(path.revenue / 142000) * 100}%` }}
+                        transition={{ duration: 0.6, delay: idx * 0.08 }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             ))}
           </div>
         </div>
 
         {/* ══════════════════════════════════════════════════════════════════
-            SECTION CARDS — each with a unique design
+            7. CONVERSION FUNNEL — absolute vs rate toggle
         ══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-
-          {/* ── 1. CAMPAIGNS — Horizontal metric bars ─────────────────────── */}
-          <motion.div
-            whileHover={{ y: -3 }} whileTap={{ scale: 0.99 }}
-            onClick={() => navigate('/campaigns')}
-            className="rounded-xl border border-blue-500/20 bg-gradient-to-br from-blue-950/40 to-slate-900/60 p-5 cursor-pointer group col-span-1"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/25 flex items-center justify-center">
-                  <Target className="w-4 h-4 text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-100">Campaigns</p>
-                  <p className="text-[10px] text-slate-500">18 active · ROI tracking</p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all" />
-            </div>
-
-            {/* Campaign bars */}
-            <div className="space-y-3">
-              {campaignPerformanceData.filter(c => c.status === 'Active').map((c, i) => {
-                const colors = ['#3b82f6', '#06b6d4', '#8b5cf6'];
-                const maxRev = 160000;
-                return (
-                  <div key={c.id}>
-                    <div className="flex items-center justify-between mb-1 text-[11px]">
-                      <span className="text-slate-300 truncate flex-1">{c.name}</span>
-                      <div className="flex items-center gap-2 shrink-0 ml-2">
-                        <span className="font-mono text-slate-400">{fmtMoney(c.revenue)}</span>
-                        <span className="font-mono font-bold" style={{ color: colors[i] }}>{c.roi}x</span>
-                      </div>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                      <motion.div className="h-full rounded-full"
-                        style={{ background: colors[i] }}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(c.revenue / maxRev) * 100}%` }}
-                        transition={{ duration: 0.7, delay: i * 0.1 }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Bottom stat row */}
-            <div className="mt-4 pt-3 border-t border-blue-900/20 flex items-center justify-between text-[11px]">
-              <div className="text-center">
-                <p className="text-slate-500">Total Spend</p>
-                <p className="font-mono font-bold text-slate-200">$125K</p>
-              </div>
-              <div className="w-px h-6 bg-blue-900/30" />
-              <div className="text-center">
-                <p className="text-slate-500">Total Revenue</p>
-                <p className="font-mono font-bold text-blue-300">$487K</p>
-              </div>
-              <div className="w-px h-6 bg-blue-900/30" />
-              <div className="text-center">
-                <p className="text-slate-500">Avg ROAS</p>
-                <p className="font-mono font-bold text-emerald-400">3.9x</p>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* ── 2. USERS — Avatar list with stat pills ────────────────────── */}
-          <motion.div
-            whileHover={{ y: -3 }} whileTap={{ scale: 0.99 }}
-            onClick={() => navigate('/users')}
-            className="rounded-xl border border-emerald-500/20 bg-gradient-to-br from-emerald-950/30 to-slate-900/60 p-5 cursor-pointer group col-span-1"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center">
-                  <Users className="w-4 h-4 text-emerald-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-100">Users & Sessions</p>
-                  <p className="text-[10px] text-slate-500">{fmt(analytics.kpi.totalUsers)} total · {fmt(analytics.kpi.returningUsers)} returning</p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" />
-            </div>
-
-            {/* User list */}
-            <div className="space-y-2.5">
-              {userSessionsData.slice(0, 4).map((u, i) => {
-                const initials = u.name.split(' ').map(n => n[0]).join('');
-                const avatarColors = ['bg-blue-500/20 text-blue-300 border-blue-500/30', 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', 'bg-purple-500/20 text-purple-300 border-purple-500/30', 'bg-amber-500/20 text-amber-300 border-amber-500/30'];
-                return (
-                  <div key={u.userId} className="flex items-center gap-3">
-                    <div className={`w-7 h-7 rounded-full border flex items-center justify-center text-[10px] font-bold shrink-0 ${avatarColors[i]}`}>
-                      {initials}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-medium text-slate-200 truncate">{u.name}</p>
-                      <p className="text-[9px] text-slate-600">{u.device} · {u.location.split(',')[1]?.trim()}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">{u.sessions}s</span>
-                      <span className="text-[10px] font-mono font-bold text-emerald-400">${u.revenue}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Stat pills */}
-            <div className="mt-4 flex items-center gap-2 flex-wrap">
-              {[
-                { label: 'Avg Session', value: '4m 47s', icon: Clock },
-                { label: 'Conv. Rate', value: `${analytics.kpi.conversionRate}%`, icon: TrendingUp },
-                { label: 'Cross-Device', value: `${analytics.kpi.crossDeviceMatchRate}%`, icon: Layers },
-              ].map(m => (
-                <div key={m.label} className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-900/20 border border-emerald-500/15 text-[10px]">
-                  <m.icon className="w-2.5 h-2.5 text-emerald-400" />
-                  <span className="text-slate-400">{m.label}:</span>
-                  <span className="font-mono font-bold text-emerald-300">{m.value}</span>
-                </div>
+        <div className="rounded-xl border border-blue-900/20 bg-slate-900/50 p-5">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <SectionHeader icon={BarChart3} title="Conversion Funnel"
+              subtitle="Platform-wide funnel — Awareness to Retention"
+              color="cyan" />
+            <div className="flex items-center gap-1 bg-slate-800/60 rounded-lg p-1">
+              {(['absolute', 'rate'] as const).map(v => (
+                <button key={v} onClick={() => setFunnelView(v)}
+                  className={`px-3 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider transition-all ${funnelView === v ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}>
+                  {v === 'absolute' ? 'Users' : 'Conv. Rate'}
+                </button>
               ))}
             </div>
-          </motion.div>
-
-          {/* ── 3. ANALYTICS — Donut + country list ──────────────────────── */}
-          <motion.div
-            whileHover={{ y: -3 }} whileTap={{ scale: 0.99 }}
-            onClick={() => navigate('/analytics')}
-            className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-950/30 to-slate-900/60 p-5 cursor-pointer group col-span-1"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-cyan-500/15 border border-cyan-500/25 flex items-center justify-center">
-                  <Globe className="w-4 h-4 text-cyan-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-100">Analytics</p>
-                  <p className="text-[10px] text-slate-500">142 countries · geo & demographics</p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all" />
-            </div>
-
-            <div className="flex items-center gap-3">
-              {/* Donut */}
-              <div className="shrink-0">
-                <ResponsiveContainer width={90} height={90}>
-                  <PieChart>
-                    <Pie data={geoMini} cx="50%" cy="50%" innerRadius={26} outerRadius={42} dataKey="pct" paddingAngle={2}>
-                      {geoMini.map((g, i) => <Cell key={i} fill={g.color} />)}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              {/* Region list */}
-              <div className="flex-1 space-y-1.5">
-                {geoMini.map(g => (
-                  <div key={g.region} className="flex items-center gap-1.5 text-[10px]">
-                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: g.color }} />
-                    <span className="text-slate-400 flex-1 truncate">{g.region}</span>
-                    <span className="font-mono text-slate-500">{g.pct}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Bottom stats */}
-            <div className="mt-3 pt-3 border-t border-cyan-900/20 grid grid-cols-3 gap-2 text-center">
-              {[
-                { label: 'Countries', value: '142' },
-                { label: 'Conv. Rate', value: `${analytics.kpi.conversionRate}%` },
-                { label: 'Bounce Rate', value: '28%' },
-              ].map(m => (
-                <div key={m.label}>
-                  <p className="text-[9px] text-slate-500 uppercase">{m.label}</p>
-                  <p className="text-xs font-mono font-bold text-slate-200">{m.value}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* ── 4. USER JOURNEYS — Funnel steps (full width on md, 2/3 on xl) */}
-          <motion.div
-            whileHover={{ y: -3 }} whileTap={{ scale: 0.99 }}
-            onClick={() => navigate('/journeys')}
-            className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-950/25 to-slate-900/60 p-5 cursor-pointer group md:col-span-2 xl:col-span-2"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/25 flex items-center justify-center">
-                  <Route className="w-4 h-4 text-amber-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-100">User Journeys</p>
-                  <p className="text-[10px] text-slate-500">Cross-channel paths from first click to conversion</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] font-mono text-amber-400 font-bold">11.5% end-to-end</span>
-                <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
-              </div>
-            </div>
-
-            {/* Funnel steps */}
-            <div className="grid grid-cols-5 gap-2">
-              {journeySteps.map((step, i) => {
-                const opacity = 0.25 + (i / journeySteps.length) * 0.55;
-                return (
-                  <div key={step.step} className="relative">
-                    {/* Step block */}
-                    <div className="rounded-lg p-3 text-center border"
-                      style={{ background: `rgba(245,158,11,${opacity * 0.15})`, borderColor: `rgba(245,158,11,${opacity * 0.4})` }}>
-                      <p className="text-base font-extrabold text-slate-100 font-mono">{fmt(step.users)}</p>
-                      <p className="text-[9px] text-slate-400 mt-0.5">{step.step}</p>
-                      <p className="text-[10px] font-mono mt-1" style={{ color: `rgba(245,158,11,${0.5 + opacity * 0.5})` }}>{step.pct}%</p>
-                    </div>
-                    {/* Connector arrow */}
-                    {i < journeySteps.length - 1 && (
-                      <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 z-10">
-                        <ChevronRight className="w-3 h-3 text-amber-700" />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Drop-off indicators */}
-            <div className="mt-3 flex items-center gap-2 flex-wrap">
-              {journeySteps.slice(1).map((step, i) => {
-                const drop = journeySteps[i].pct - step.pct;
-                return (
-                  <span key={step.step} className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-red-900/20 border border-red-500/15 text-red-400">
-                    {journeySteps[i].step}→{step.step}: -{drop}%
-                  </span>
-                );
-              })}
-            </div>
-          </motion.div>
-
-          {/* ── 5. TRACKABLE LINKS — Card with link rows ──────────────────── */}
-          <motion.div
-            whileHover={{ y: -3 }} whileTap={{ scale: 0.99 }}
-            onClick={() => navigate('/links')}
-            className="rounded-xl border border-pink-500/20 bg-gradient-to-br from-pink-950/25 to-slate-900/60 p-5 cursor-pointer group col-span-1"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-pink-500/15 border border-pink-500/25 flex items-center justify-center">
-                  <Link2 className="w-4 h-4 text-pink-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-100">Trackable Links</p>
-                  <p className="text-[10px] text-slate-500">SDK · supercookie · 12 active</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-pink-500/20 text-pink-300 border border-pink-500/20">NEW</span>
-                <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-pink-400 group-hover:translate-x-0.5 transition-all" />
-              </div>
-            </div>
-
-            {/* Link cards */}
-            <div className="space-y-2.5">
-              {linksMini.map(l => (
-                <div key={l.name} className="rounded-lg border p-3 flex items-center justify-between"
-                  style={{ borderColor: `${l.color}25`, background: `${l.color}08` }}>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-1.5 h-8 rounded-full shrink-0" style={{ background: l.color }} />
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-mono font-bold" style={{ color: l.color }}>{l.name}</p>
-                      <p className="text-[10px] text-slate-400 truncate">{l.label}</p>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0 ml-2">
-                    <p className="text-xs font-mono font-bold text-slate-200">{fmt(l.clicks)}</p>
-                    <p className="text-[9px] text-slate-500">clicks</p>
-                    <p className="text-[10px] font-mono font-bold" style={{ color: l.color }}>{l.roi}x ROI</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Total */}
-            <div className="mt-3 pt-3 border-t border-pink-900/20 flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">Total clicks</span>
-              <span className="font-mono font-bold text-slate-200">96K</span>
-              <div className="w-px h-4 bg-pink-900/30" />
-              <span className="text-slate-500">Avg conv.</span>
-              <span className="font-mono font-bold text-pink-300">6.9%</span>
-            </div>
-          </motion.div>
-
-          {/* ── 6. ORBITAL COMMAND — Resolution trend (wide) ─────────────── */}
-          <motion.div
-            whileHover={{ y: -3 }} whileTap={{ scale: 0.99 }}
-            onClick={() => navigate('/orbital')}
-            className="rounded-xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/30 to-slate-900/60 p-5 cursor-pointer group md:col-span-2 xl:col-span-2"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center">
-                  <Orbit className="w-4 h-4 text-indigo-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-100">Orbital Command</p>
-                  <p className="text-[10px] text-slate-500">Real-time identity resolution · 8-week trend</p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-              {/* Chart */}
-              <div className="md:col-span-2">
-                <ResponsiveContainer width="100%" height={100}>
-                  <AreaChart data={orbitalMini} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                    <defs>
-                      <linearGradient id="orbGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="t" tick={{ fontSize: 9, fill: '#64748b' }} />
-                    <YAxis tick={{ fontSize: 8, fill: '#64748b' }} domain={[50, 100]} />
-                    <Tooltip content={<DarkTooltip />} />
-                    <Area type="monotone" dataKey="r" name="Resolved %" stroke="#6366f1" fill="url(#orbGrad)" strokeWidth={2} dot={{ r: 2, fill: '#6366f1' }} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Stat column */}
-              <div className="space-y-2">
-                {[
-                  { label: 'Resolution Rate', value: '88.4%', color: '#6366f1' },
-                  { label: 'Identity Graph', value: '1.2M nodes', color: '#8b5cf6' },
-                  { label: 'Avg Confidence', value: '91.2%', color: '#10b981' },
-                  { label: 'Events / sec', value: '340', color: '#f59e0b' },
-                ].map(m => (
-                  <div key={m.label} className="flex items-center justify-between text-[11px] py-1 border-b border-indigo-900/20 last:border-0">
-                    <span className="text-slate-500">{m.label}</span>
-                    <span className="font-mono font-bold" style={{ color: m.color }}>{m.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-
-          {/* ── 7. PLATFORM HEALTH — Status list (1 col) ─────────────────── */}
-          <motion.div
-            whileHover={{ y: -3 }} whileTap={{ scale: 0.99 }}
-            onClick={() => navigate('/orbital')}
-            className="rounded-xl border border-slate-700/40 bg-gradient-to-br from-slate-800/40 to-slate-900/60 p-5 cursor-pointer group col-span-1"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-amber-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-100">Platform Health</p>
-                  <p className="text-[10px] text-slate-500">All systems operational</p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
-            </div>
-
-            <div className="space-y-2.5">
-              {[
-                { label: 'SDK Integration',       status: 'Operational', pct: 100, color: '#10b981' },
-                { label: 'Supercookie Engine',     status: '88.4%',       pct: 88,  color: '#3b82f6' },
-                { label: 'Cross-Device Match',     status: '64.8%',       pct: 65,  color: '#8b5cf6' },
-                { label: 'Attribution Engine',     status: 'Operational', pct: 100, color: '#10b981' },
-                { label: 'Event Pipeline',         status: '340 evt/s',   pct: 100, color: '#10b981' },
-              ].map(item => (
-                <div key={item.label}>
-                  <div className="flex items-center justify-between mb-0.5 text-[10px]">
-                    <span className="text-slate-400">{item.label}</span>
-                    <span className="font-mono" style={{ color: item.color }}>{item.status}</span>
-                  </div>
-                  <div className="h-1 rounded-full bg-slate-800 overflow-hidden">
-                    <motion.div className="h-full rounded-full"
-                      style={{ background: item.color }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${item.pct}%` }}
-                      transition={{ duration: 0.7 }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-        </div>
-
-        {/* ── Conversion Funnel (full width) ───────────────────────────────── */}
-        <motion.div
-          whileHover={{ y: -2 }} whileTap={{ scale: 0.995 }}
-          onClick={() => navigate('/analytics')}
-          className="rounded-xl border border-emerald-500/15 bg-gradient-to-br from-slate-900/60 to-emerald-950/20 p-5 cursor-pointer group"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                <MousePointerClick className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-slate-100">Conversion Funnel</p>
-                <p className="text-[10px] text-slate-500">Platform-wide · Awareness → Retention</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-600 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-            {/* Funnel bars */}
-            <div className="space-y-2.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            {/* Funnel visual */}
+            <div className="space-y-2">
               {conversionFunnelData.map((stage, i) => {
                 const pct = Math.round((stage.users / conversionFunnelData[0].users) * 100);
-                const drop = i > 0 ? Math.round(((conversionFunnelData[i - 1].users - stage.users) / conversionFunnelData[i - 1].users) * 100) : 0;
+                const drop = i > 0 ? Math.round(((conversionFunnelData[i-1].users - stage.users) / conversionFunnelData[i-1].users) * 100) : 0;
                 const stageColors = ['#3b82f6', '#06b6d4', '#10b981', '#8b5cf6', '#f59e0b'];
+                const displayVal = funnelView === 'absolute' ? fmt(stage.users) : `${stage.conversionRate}%`;
                 return (
                   <div key={stage.stage}>
-                    <div className="flex items-center justify-between mb-0.5 text-[11px]">
-                      <span className="text-slate-300">{stage.stage}</span>
-                      <div className="flex items-center gap-2">
-                        {drop > 0 && <span className="text-red-400 font-mono text-[9px]">-{drop}%</span>}
-                        <span className="font-mono text-slate-200">{fmt(stage.users)}</span>
-                        <span className="text-slate-500 w-7 text-right">{pct}%</span>
+                    <div className="flex items-center justify-between mb-1 text-[11px]">
+                      <span className="text-slate-300 font-medium w-28">{stage.stage}</span>
+                      <div className="flex items-center gap-2 flex-1 mx-3">
+                        <div className="flex-1 h-5 rounded bg-slate-800 overflow-hidden relative">
+                          <motion.div className="h-full rounded"
+                            style={{ background: stageColors[i] }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${funnelView === 'absolute' ? pct : stage.conversionRate}%` }}
+                            transition={{ duration: 0.6, delay: i * 0.08 }}
+                          />
+                          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-mono font-bold text-white mix-blend-plus-lighter">
+                            {displayVal}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
-                      <motion.div className="h-full rounded-full"
-                        style={{ background: stageColors[i] }}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.6, delay: i * 0.08 }}
-                      />
+                      <div className="flex items-center gap-2 w-20 justify-end">
+                        {drop > 0 && <span className="text-red-400 font-mono text-[9px]">-{drop}%</span>}
+                        <span className="text-slate-500 font-mono text-[9px]">{pct}%</span>
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Highlights */}
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: 'Top of Funnel',   value: fmt(284700) + ' users', color: '#3b82f6',  icon: Users },
-                { label: 'Purchase Rate',   value: '78.6%',                color: '#10b981',  icon: TrendingUp },
-                { label: 'Retention Rate',  value: '80%',                  color: '#8b5cf6',  icon: CheckCircle },
-                { label: 'Biggest Drop',    value: 'Awareness → Consid.',  color: '#f59e0b',  icon: AlertTriangle },
-              ].map(item => (
-                <div key={item.label} className="rounded-lg border border-white/5 bg-slate-800/30 p-3">
-                  <item.icon className="w-3.5 h-3.5 mb-1.5" style={{ color: item.color }} />
-                  <p className="text-[9px] text-slate-500 uppercase tracking-wider">{item.label}</p>
-                  <p className="text-xs font-mono font-bold mt-0.5" style={{ color: item.color }}>{item.value}</p>
+            {/* Funnel chart */}
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={conversionFunnelData} layout="vertical" margin={{ top: 0, right: 20, bottom: 0, left: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 9, fill: '#475569' }}
+                  tickFormatter={v => funnelView === 'absolute' ? fmt(v) : `${v}%`} />
+                <YAxis type="category" dataKey="stage" tick={{ fontSize: 9, fill: '#64748b' }} width={60} />
+                <Tooltip content={<DT />} />
+                <Bar dataKey={funnelView === 'absolute' ? 'users' : 'conversionRate'}
+                  name={funnelView === 'absolute' ? 'Users' : 'Conv. Rate'}
+                  radius={[0, 4, 4, 0]}>
+                  {conversionFunnelData.map((_, i) => {
+                    const colors = ['#3b82f6', '#06b6d4', '#10b981', '#8b5cf6', '#f59e0b'];
+                    return <Cell key={i} fill={colors[i]} />;
+                  })}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════════════════════════════════════
+            8. CROSS-DEVICE FINGERPRINTING — ROI by device journey
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="rounded-xl border border-indigo-500/15 bg-slate-900/50 p-5">
+          <SectionHeader icon={Layers} title="Cross-Device Fingerprinting & True ROI"
+            subtitle="Identity resolution across devices — users tracked via supercookie, not just cookies"
+            color="indigo" action="Orbital Command" onAction={() => navigate('/orbital')} />
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* Device segment cards */}
+            <div className="space-y-3">
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider">ROI by Device Journey</p>
+              {CROSS_DEVICE.map(seg => {
+                const DevIcon = seg.icon;
+                const convRate = Math.round((seg.conv / seg.users) * 100 * 10) / 10;
+                return (
+                  <div key={seg.segment} className="flex items-center gap-3 p-3 rounded-lg border border-slate-800/60 bg-slate-800/20">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: `${seg.color}15`, border: `1px solid ${seg.color}30` }}>
+                      <DevIcon className="w-4 h-4" style={{ color: seg.color }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] font-medium text-slate-200">{seg.segment}</span>
+                        <span className="text-[10px] font-mono font-bold" style={{ color: seg.color }}>{seg.roi}x ROI</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[9px] text-slate-500">
+                        <span>{fmt(seg.users)} users</span>
+                        <span>·</span>
+                        <span>{fmt(seg.conv)} conv.</span>
+                        <span>·</span>
+                        <span>{convRate}% rate</span>
+                      </div>
+                      <div className="mt-1.5 h-1 rounded-full bg-slate-800 overflow-hidden">
+                        <motion.div className="h-full rounded-full"
+                          style={{ background: seg.color }}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${(seg.roi / 8) * 100}%` }}
+                          transition={{ duration: 0.7 }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="mt-2 p-3 rounded-lg border border-amber-500/15 bg-amber-900/10 text-[10px]">
+                <div className="flex items-start gap-2">
+                  <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  <p className="text-amber-300/80">
+                    <span className="font-bold text-amber-300">Key insight:</span> Users tracked across all devices convert at <span className="font-bold">7.2x ROI</span> — 60% higher than desktop-only. Cross-device identity resolution is the single biggest lever for campaign ROI.
+                  </p>
                 </div>
-              ))}
+              </div>
+            </div>
+
+            {/* Device journey stacked bar */}
+            <div>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-3">Desktop vs Mobile at Each Funnel Stage</p>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={DEVICE_JOURNEY} margin={{ top: 0, right: 0, bottom: 0, left: -10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="stage" tick={{ fontSize: 9, fill: '#475569' }} />
+                  <YAxis tick={{ fontSize: 9, fill: '#475569' }} tickFormatter={v => `${v}%`} domain={[0, 100]} />
+                  <Tooltip content={<DT />} />
+                  <Legend wrapperStyle={{ fontSize: 9, color: '#64748b' }} />
+                  <Bar dataKey="desktop" name="Desktop %" stackId="a" fill="#3b82f6" radius={[0,0,0,0]} />
+                  <Bar dataKey="mobile"  name="Mobile %"  stackId="a" fill="#10b981" radius={[3,3,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+              <p className="text-[9px] text-slate-600 mt-2">
+                Mobile dominates awareness (55%) but desktop closes the sale (74% at purchase). Cross-device tracking bridges this gap.
+              </p>
             </div>
           </div>
-        </motion.div>
+        </div>
 
-        {/* ── Recent Events (bottom) ────────────────────────────────────────── */}
+        {/* ══════════════════════════════════════════════════════════════════
+            9. LIVE EVENT FEED
+        ══════════════════════════════════════════════════════════════════ */}
         <div className="rounded-xl border border-blue-900/20 bg-slate-900/40 p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <p className="text-xs font-bold text-slate-200">Recent Events</p>
+              <p className="text-xs font-bold text-slate-200">Live Event Feed</p>
+              <span className="text-[9px] font-mono text-slate-500">340 events/sec</span>
             </div>
             <button onClick={() => navigate('/orbital')} className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5 transition-colors">
-              View all <ChevronRight className="w-3 h-3" />
+              Orbital Command <ChevronRight className="w-3 h-3" />
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
             {realtimeEventsData.map(evt => (
-              <div key={evt.id} className={`flex items-center justify-between p-2.5 rounded-lg border text-[11px] ${evt.type === 'Conversion' ? 'border-emerald-500/15 bg-emerald-900/10' : 'border-blue-900/15 bg-slate-800/30'}`}>
-                <div className="flex items-center gap-2">
-                  <div className={`w-1.5 h-1.5 rounded-full ${evt.type === 'Conversion' ? 'bg-emerald-400' : 'bg-blue-400'}`} />
-                  <span className="text-slate-300 font-medium">{evt.user}</span>
-                  <span className={evt.type === 'Conversion' ? 'text-emerald-400' : 'text-slate-500'}>{evt.type}</span>
+              <div key={evt.id} className={`flex items-center justify-between p-2.5 rounded-lg border text-[11px] ${
+                evt.type === 'Conversion'
+                  ? 'border-emerald-500/15 bg-emerald-900/10'
+                  : 'border-slate-800/40 bg-slate-800/20'
+              }`}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${evt.type === 'Conversion' ? 'bg-emerald-400' : 'bg-blue-400'}`} />
+                  <span className="text-slate-300 font-medium truncate">{evt.user}</span>
+                  <span className={`shrink-0 ${evt.type === 'Conversion' ? 'text-emerald-400' : 'text-slate-500'}`}>{evt.type}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
                   {evt.value > 0 && <span className="font-mono font-bold text-emerald-400">${evt.value}</span>}
-                  <span className="text-slate-600 font-mono text-[9px] px-1.5 py-0.5 rounded bg-slate-800">{evt.channel}</span>
+                  <span className="text-[9px] font-mono text-slate-600 px-1.5 py-0.5 rounded bg-slate-800">{evt.channel}</span>
                 </div>
               </div>
             ))}
