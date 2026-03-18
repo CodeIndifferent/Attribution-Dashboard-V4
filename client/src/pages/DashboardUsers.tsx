@@ -24,6 +24,40 @@ import UserJourneysDetail from './UserJourneysDetail';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+// ─── Normalize raw usersData User → UserProfileTabs shape ────────────────────
+function normalizeUser(raw: any): { name: string; email: string; location: string; device: string; sessions: number; conversions: number; revenue: number; status: string } {
+  // If already in the flat shape (from userSessionsData), return as-is
+  if (typeof raw.location === 'string' && typeof raw.device === 'string') {
+    return {
+      name: raw.name,
+      email: raw.email,
+      location: raw.location,
+      device: raw.device,
+      sessions: raw.sessions ?? 0,
+      conversions: raw.conversions ?? 0,
+      revenue: raw.revenue ?? 0,
+      status: raw.status ?? 'Active',
+    };
+  }
+  // Otherwise it's a usersData User with nested fields
+  const city = raw.primaryLocation?.city ?? '';
+  const country = raw.primaryLocation?.country ?? '';
+  const primaryDevice = raw.devices?.[0];
+  const deviceLabel = primaryDevice
+    ? `${primaryDevice.type} — ${primaryDevice.browser} on ${primaryDevice.os}`
+    : 'Unknown Device';
+  return {
+    name: raw.name ?? raw.userId ?? 'Unknown',
+    email: raw.email ?? '',
+    location: [city, country].filter(Boolean).join(', ') || 'Unknown',
+    device: deviceLabel,
+    sessions: raw.totalSessions ?? 0,
+    conversions: raw.totalTransactions ?? 0,
+    revenue: raw.totalSpent ?? raw.lifetimeValue ?? 0,
+    status: raw.lastSeen ? 'Active' : 'Inactive',
+  };
+}
+
 // ─── Custom Tooltip ───────────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
@@ -654,8 +688,9 @@ export default function DashboardUsers() {
 
   // User profile drilldown (from any tab)
   if (selectedUser) {
+    const normalizedUser = normalizeUser(selectedUser);
     return (
-      <DashboardLayout title={`${selectedUser.name || selectedUser.userId} — User Profile`} subtitle="View user overview, Web2 activity, and Web3 portfolio">
+      <DashboardLayout title={`${normalizedUser.name} — User Profile`} subtitle="View user overview, Web2 activity, and Web3 portfolio">
         <div className="space-y-6">
           <button
             onClick={handleBack}
@@ -664,7 +699,7 @@ export default function DashboardUsers() {
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to Users
           </button>
-          <UserProfileTabs user={selectedUser} />
+          <UserProfileTabs user={normalizedUser} />
         </div>
       </DashboardLayout>
     );

@@ -4,9 +4,10 @@
  */
 import { useState } from "react";
 import {
-  campaignJourneys, conversionPaths, dropOffPaths, globalFunnel,
+  conversionPaths, dropOffPaths, globalFunnel,
   CampaignJourney, JourneyPath
 } from "@/lib/journeyIntelData";
+import { mockTrackableLinks } from "@/lib/trackableLinkData";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, FunnelChart, Funnel, LabelList
@@ -323,15 +324,64 @@ function GlobalFunnel() {
   );
 }
 
+// ─── Channel color map for campaign cards ────────────────────
+const CHANNEL_COLORS: Record<string, string> = {
+  'Social Media': '#3b82f6',
+  'Email':        '#10b981',
+  'Paid Ads':     '#f59e0b',
+  'Organic':      '#8b5cf6',
+  'Article':      '#06b6d4',
+  'Influencer':   '#ec4899',
+  'SMS':          '#f97316',
+  'Direct':       '#64748b',
+};
+
+// Build CampaignJourney entries from trackable links data
+function buildCampaignJourneys(): CampaignJourney[] {
+  const result: CampaignJourney[] = [];
+  mockTrackableLinks
+    .filter(link => link.status === 'Active')
+    .forEach(link => {
+      link.campaigns.forEach(camp => {
+        const totalUsers = link.channelMetrics
+          .find(m => m.channel === camp.channel)?.uniqueVisitors ?? Math.round(camp.conversions / 0.08);
+        const dropOffs = totalUsers - camp.conversions;
+        const conversionRate = totalUsers > 0 ? parseFloat(((camp.conversions / totalUsers) * 100).toFixed(1)) : 0;
+        // Avg touchpoints heuristic by channel
+        const touchpointMap: Record<string, number> = {
+          'Social Media': 3.2, 'Email': 5.4, 'Paid Ads': 2.1,
+          'Organic': 1.8, 'Article': 2.6, 'Influencer': 3.8,
+          'SMS': 2.0, 'Direct': 1.5,
+        };
+        result.push({
+          id: camp.campaignId,
+          campaign: camp.campaignName,
+          // Use the original channel name as the display label (cast to satisfy the type)
+          channel: camp.channel as any,
+          totalUsers,
+          conversions: camp.conversions,
+          dropOffs: Math.max(0, dropOffs),
+          revenue: camp.revenue,
+          conversionRate,
+          avgTouchpoints: touchpointMap[camp.channel] ?? 2.5,
+          color: CHANNEL_COLORS[camp.channel] ?? '#64748b',
+        });
+      });
+    });
+  return result;
+}
+
 // ─── Main Command Center ──────────────────────────────────────
 export default function JourneyCommandCenter() {
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'overview' | 'conversions' | 'dropoffs' | 'funnel'>('overview');
 
+  const campaignJourneys = buildCampaignJourneys();
+
   const totalUsers = campaignJourneys.reduce((s, c) => s + c.totalUsers, 0);
   const totalConversions = campaignJourneys.reduce((s, c) => s + c.conversions, 0);
   const totalRevenue = campaignJourneys.reduce((s, c) => s + c.revenue, 0);
-  const avgCVR = (totalConversions / totalUsers * 100).toFixed(1);
+  const avgCVR = totalUsers > 0 ? (totalConversions / totalUsers * 100).toFixed(1) : '0.0';
 
   const chartData = campaignJourneys.map(c => ({
     name: c.campaign.split(' ').slice(0, 2).join(' '),
