@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 const navItems = [
-  { id: 'overview', icon: BarChart3, label: 'Campaign Overview', path: '/', badge: null },
+  { id: 'overview', icon: BarChart3, label: 'Overview', path: '/', badge: null },
   { id: 'campaigns', icon: Target, label: 'Campaigns', path: '/campaigns', badge: '8' },
   { id: 'users', icon: Users, label: 'Users & Sessions', path: '/users', badge: null },
   { id: 'attribution', icon: TrendingUp, label: 'Attribution', path: '/attribution', badge: null },
