@@ -9,7 +9,6 @@ import DashboardCampaigns from "./pages/DashboardCampaigns";
 import DashboardUsers from "./pages/DashboardUsers";
 import DashboardAttribution from "./pages/DashboardAttribution";
 import DashboardAnalytics from "./pages/DashboardAnalytics";
-import DashboardFingerprints from "./pages/DashboardFingerprints";
 import DashboardJourneys from "./pages/DashboardJourneys";
 import DashboardOrbitalPage from "./pages/DashboardOrbital";
 import DashboardLinks from "./pages/DashboardLinks";
@@ -22,7 +21,6 @@ function Router() {
       <Route path={"/users"} component={DashboardUsers} />
       <Route path={"/attribution"} component={DashboardAttribution} />
       <Route path={"/analytics"} component={DashboardAnalytics} />
-      <Route path={"/fingerprints"} component={DashboardFingerprints} />
       <Route path={"/journeys"} component={DashboardJourneys} />
       <Route path={"/orbital"} component={DashboardOrbitalPage} />
       <Route path={"/links"} component={DashboardLinks} />

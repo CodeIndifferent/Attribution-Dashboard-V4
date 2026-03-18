@@ -18,7 +18,6 @@ const navItems = [
   { id: 'attribution', icon: TrendingUp, label: 'Attribution', path: '/attribution', badge: null },
   { id: 'analytics', icon: Globe, label: 'Analytics', path: '/analytics', badge: null },
   { id: 'journeys', icon: Route, label: 'User Journeys', path: '/journeys', badge: null },
-  { id: 'fingerprint', icon: Fingerprint, label: 'User Fingerprints', path: '/fingerprints', badge: null },
   { id: 'links', icon: Link2, label: 'Trackable Links', path: '/links', badge: 'NEW' },
   { id: 'orbital', icon: Orbit, label: 'Orbital Command', path: '/orbital', badge: null },
 ];
