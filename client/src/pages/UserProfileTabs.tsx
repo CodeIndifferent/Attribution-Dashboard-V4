@@ -7,6 +7,7 @@ import { Globe, Wallet, Eye } from 'lucide-react';
 import UserOverview from './UserOverview';
 import UserWeb2Activity from './UserWeb2Activity';
 import UserWeb3Activity from './UserWeb3Activity';
+import { User } from '@/lib/userData';
 
 interface UserProfileTabsProps {
   user: {
@@ -19,11 +20,12 @@ interface UserProfileTabsProps {
     revenue: number;
     status: string;
   };
+  rawUser?: User; // full usersData record for fingerprint sections
 }
 
 type TabType = 'overview' | 'web2' | 'web3';
 
-export default function UserProfileTabs({ user }: UserProfileTabsProps) {
+export default function UserProfileTabs({ user, rawUser }: UserProfileTabsProps) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
 
   const tabs = [
@@ -77,7 +79,7 @@ export default function UserProfileTabs({ user }: UserProfileTabsProps) {
 
       {/* Tab Content */}
       <div className="animate-fadeIn">
-        {activeTab === 'overview' && <UserOverview user={user} />}
+        {activeTab === 'overview' && <UserOverview user={user} rawUser={rawUser} />}
         {activeTab === 'web2' && <UserWeb2Activity user={user} />}
         {activeTab === 'web3' && <UserWeb3Activity user={user} />}
       </div>

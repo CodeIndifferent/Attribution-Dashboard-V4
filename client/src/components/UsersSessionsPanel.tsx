@@ -137,7 +137,7 @@ export default function UsersSessionsPanel() {
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to Profiles
         </button>
-        <UserProfileTabs user={normalized} />
+        <UserProfileTabs user={normalized} rawUser={selectedUser} />
       </div>
     );
   }

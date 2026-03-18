@@ -689,6 +689,11 @@ export default function DashboardUsers() {
   // User profile drilldown (from any tab)
   if (selectedUser) {
     const normalizedUser = normalizeUser(selectedUser);
+    // Pass the raw usersData User if available (has devices[] array = from usersData)
+    // or look it up by email/name from usersData for flat userSessionsData users
+    const rawUserForProfile = Array.isArray(selectedUser.devices)
+      ? selectedUser
+      : usersData.find(u => u.email === selectedUser.email || u.name === selectedUser.name);
     return (
       <DashboardLayout title={`${normalizedUser.name} — User Profile`} subtitle="View user overview, Web2 activity, and Web3 portfolio">
         <div className="space-y-6">
@@ -699,7 +704,7 @@ export default function DashboardUsers() {
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to Users
           </button>
-          <UserProfileTabs user={normalizedUser} />
+          <UserProfileTabs user={normalizedUser} rawUser={rawUserForProfile} />
         </div>
       </DashboardLayout>
     );

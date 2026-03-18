@@ -118,8 +118,8 @@ export const campaignPerformanceData = [
 export const userSessionsData = [
   {
     userId: 'user-001',
-    email: 'sarah.johnson@example.com',
-    name: 'Sarah Johnson',
+    email: 'sarah.k@example.com',
+    name: 'Sarah K.',
     location: 'San Francisco, CA',
     device: 'iPhone 14 Pro',
     browser: 'Safari',
@@ -132,8 +132,8 @@ export const userSessionsData = [
   },
   {
     userId: 'user-002',
-    email: 'michael.chen@example.com',
-    name: 'Michael Chen',
+    email: 'marcus.t@example.com',
+    name: 'Marcus T.',
     location: 'New York, NY',
     device: 'MacBook Pro',
     browser: 'Chrome',
@@ -146,8 +146,8 @@ export const userSessionsData = [
   },
   {
     userId: 'user-003',
-    email: 'emily.rodriguez@example.com',
-    name: 'Emily Rodriguez',
+    email: 'priya.m@example.com',
+    name: 'Priya M.',
     location: 'Austin, TX',
     device: 'Samsung Galaxy S21',
     browser: 'Chrome',
@@ -160,8 +160,8 @@ export const userSessionsData = [
   },
   {
     userId: 'user-004',
-    email: 'david.kumar@example.com',
-    name: 'David Kumar',
+    email: 'james.r@example.com',
+    name: 'James R.',
     location: 'London, UK',
     device: 'iPad Air',
     browser: 'Safari',
@@ -174,8 +174,8 @@ export const userSessionsData = [
   },
   {
     userId: 'user-005',
-    email: 'jessica.williams@example.com',
-    name: 'Jessica Williams',
+    email: 'elena.v@example.com',
+    name: 'Elena V.',
     location: 'Toronto, Canada',
     device: 'Windows PC',
     browser: 'Firefox',
