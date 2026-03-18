@@ -12,6 +12,7 @@ import DashboardAnalytics from "./pages/DashboardAnalytics";
 import DashboardFingerprints from "./pages/DashboardFingerprints";
 import DashboardJourneys from "./pages/DashboardJourneys";
 import DashboardOrbitalPage from "./pages/DashboardOrbital";
+import DashboardLinks from "./pages/DashboardLinks";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
       <Route path={"/fingerprints"} component={DashboardFingerprints} />
       <Route path={"/journeys"} component={DashboardJourneys} />
       <Route path={"/orbital"} component={DashboardOrbitalPage} />
+      <Route path={"/links"} component={DashboardLinks} />
       <Route path={"/campaign/:campaignId"} component={Home} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />

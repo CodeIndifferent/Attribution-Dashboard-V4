@@ -6,7 +6,7 @@ import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import {
   BarChart3, Users, Route, Target, Fingerprint, TrendingUp,
-  Settings, ChevronLeft, ChevronRight, Bell, Zap, Orbit, Globe
+  Settings, ChevronLeft, ChevronRight, Bell, Zap, Orbit, Globe, Link2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ const navItems = [
   { id: 'analytics', icon: Globe, label: 'Analytics', path: '/analytics', badge: null },
   { id: 'journeys', icon: Route, label: 'User Journeys', path: '/journeys', badge: null },
   { id: 'fingerprint', icon: Fingerprint, label: 'User Fingerprints', path: '/fingerprints', badge: null },
+  { id: 'links', icon: Link2, label: 'Trackable Links', path: '/links', badge: 'NEW' },
   { id: 'orbital', icon: Orbit, label: 'Orbital Command', path: '/orbital', badge: null },
 ];
 
