@@ -21,6 +21,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import UserProfileTabs from './UserProfileTabs';
 import JourneyCommandCenter from '@/components/JourneyCommandCenter';
 import UserJourneysDetail from './UserJourneysDetail';
+import UsersSessionsPanel from '@/components/UsersSessionsPanel';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -93,7 +94,7 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
 }
 
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
-function OverviewTab({ onUserClick }: { onUserClick: (user: any) => void }) {
+function OverviewTab() {
   const totalSessions = userSessionsData.reduce((sum, u) => sum + u.sessions, 0);
   const totalConversions = userSessionsData.reduce((sum, u) => sum + u.conversions, 0);
   const totalRevenue = userSessionsData.reduce((sum, u) => sum + u.revenue, 0);
@@ -178,57 +179,8 @@ function OverviewTab({ onUserClick }: { onUserClick: (user: any) => void }) {
         </div>
       </div>
 
-      {/* Users Table */}
-      <div className="rounded-lg border border-cyan-500/30 overflow-hidden bg-gradient-to-br from-slate-900/60 via-slate-900/40 to-slate-900/60 backdrop-blur-md">
-        <div className="flex items-center gap-2.5 px-6 py-5 border-b border-cyan-500/20 bg-gradient-to-r from-slate-900/80 to-slate-900/40">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center"><Users className="w-4 h-4 text-white" /></div>
-          <div>
-            <h3 className="text-sm font-bold text-cyan-300">User Details</h3>
-            <p className="text-xs text-cyan-300/60 mt-0.5">Click on any user row to view their profile</p>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-cyan-500/15 bg-gradient-to-r from-blue-900/20 to-cyan-900/10">
-                {['Name', 'Email', 'Sessions', 'Conversions', 'Revenue', 'Device', 'Status'].map(h => (
-                  <th key={h} className="text-left py-4 px-6 font-bold text-cyan-300 uppercase tracking-wider text-xs">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-cyan-500/10">
-              {userSessionsData.map((user, i) => (
-                <tr
-                  key={i}
-                  onClick={() => onUserClick(user)}
-                  className="hover:bg-cyan-500/10 transition-all cursor-pointer group border-l-4 border-transparent hover:border-cyan-500"
-                >
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                        {user.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
-                      </div>
-                      <span className="font-semibold text-cyan-300 group-hover:text-cyan-200">{user.name}</span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6 text-blue-300/70 font-mono text-xs">{user.email}</td>
-                  <td className="py-4 px-6 text-slate-300 font-mono font-bold">{user.sessions}</td>
-                  <td className="py-4 px-6 text-emerald-400 font-mono font-bold">{user.conversions}</td>
-                  <td className="py-4 px-6 text-amber-400 font-mono font-bold">${user.revenue.toLocaleString()}</td>
-                  <td className="py-4 px-6">
-                    <Badge className="text-[9px] px-2 py-0.5 bg-slate-800/50 text-blue-300 border-slate-700/50">{user.device || 'Desktop'}</Badge>
-                  </td>
-                  <td className="py-4 px-6">
-                    <Badge className={cn('text-[9px] px-2 py-0.5', user.status === 'Active' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-slate-700/50 text-slate-400 border-slate-600/30')}>
-                      {user.status || 'Active'}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* User Profiles — same card component as Orbital Command > Profiles tab */}
+      <UsersSessionsPanel />
     </div>
   );
 }
@@ -728,7 +680,7 @@ export default function DashboardUsers() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'overview' && <OverviewTab onUserClick={handleUserClick} />}
+        {activeTab === 'overview' && <OverviewTab />}
         {activeTab === 'details' && <UserDetailsTab onUserClick={handleUserClick} />}
         {activeTab === 'journey' && <UserJourneyTab />}
 
