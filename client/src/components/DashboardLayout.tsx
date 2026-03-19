@@ -4,6 +4,7 @@
  */
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
+import AIChatbot from './AIChatbot';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -27,6 +28,9 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
           {children}
         </main>
       </div>
+
+      {/* AI Chatbot — fixed bottom-right, available on every page */}
+      <AIChatbot />
     </div>
   );
 }
